@@ -1,13 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
-use marketplacedescentralizado::SistemaRef;
-
 #[ink::contract]
 mod reportes {
     use super::*;
-    use ink::prelude::vec::Vec;
-    use marketplacedescentralizado::Usuario;
     use ink::env::call::FromAccountId;
+    use ink::prelude::vec::Vec;
+    use marketplacedescentralizado::prelude::*;
+    
 
     #[ink(storage)]
     pub struct Reportes {
