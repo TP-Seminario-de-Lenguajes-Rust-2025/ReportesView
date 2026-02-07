@@ -5,7 +5,13 @@ mod reportes {
     use super::*;
     use ink::env::call::FromAccountId;
     use ink::prelude::vec::Vec;
+    use ink::prelude::string::String;
     use marketplacedescentralizado::prelude::*;
+
+    pub struct ReporteOrdenesUsuario {
+        pub nombre_usuario: String,
+        pub cantidad_ordenes: u32,
+    }
     
     //TODO: Los tipos de retorno son genericos. Hay que crear 
     //      un struct que contenga producto_id, nombre del producto
@@ -58,7 +64,22 @@ mod reportes {
         pub fn listar_usuarios(&self) -> Vec<Usuario> {
             self.original.listar_usuarios()
         }
+
+        //funcion auxialiar para calcular promedio 
+        fn _calcular_promedio(&self, usuario: &Usuario, rol: &Rol)-> u32{
+            let(puntos,cantidad) = match rol{
+                Rol::Comprador => usuario.rating.calificacion_comprador,
+                Rol::Vendedor => usuario.rating.calificacion_vendedor,
+                _ => (0, 0),
+            }
+            if cantidad ==0 {
+                0
+            }else {
+                puntos / cantidad 
+            }
+        }
     }
+
     impl ConsultasUsuarios for Reportes {
         #[ink(message)]
         fn get_cantidad_de_ordenes_por_usuario(&self) -> Vec<ReporteOrdenesUsuario> {
@@ -79,6 +100,33 @@ mod reportes {
                 reporte.push(item);
             }
             reporte
+        }
+        #[ink(message)]
+        fn get_mejores_usuarios_por_rol(&self, target_role: Rol) -> Vec<Usuario> {
+            let usuarios = self.original.listar_usuarios();
+            let mut usuarios_filtrados = Vec::new();
+
+            //aca filtro usuarios que tengan el target role
+            for usuario in usuarios{
+                if usuario.has_role(target_role.clone()){
+                    usuarios_filtrados.push(usuario);
+                }
+            }
+            //ordeno  por promedio de mayor a menos
+            usuarios_filtrados.sort_by(|a, b| {
+                let prom_a = self._calcular_promedio(a, &target_role);
+                let prom_b = self._calcular_promedio(b, &target_role);
+                prom_b.cmp(&prom_a) 
+            });
+            //me quedo con solo los 5 primeros
+            let mut top_5 = Vec::new();
+            let mut count = 0;
+            for u in usuarios_filtrados{
+                if count >= 5{break;}
+                top_5.push(u);
+                count += 1;
+            }
+            top_5
         }
     }
 }
