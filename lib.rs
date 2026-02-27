@@ -233,13 +233,14 @@ mod tests {
     }
 
     fn reportes_view(address: AccountId) -> Reportes {
-        let reportes = Reportes::new(ink::env::address());
+        let reportes = Reportes::new(ink::env::account_id);
         reportes
     }
 
 
     #[ink::test]
     fn test_get_cantidad_ordenes_por_usuario_exitosa(){
-        
+        let (sistema, user1, user2) = build_testing_setup();
+        assert_eq!(2,sistema.listar_usuarios().length());
     }
 }
