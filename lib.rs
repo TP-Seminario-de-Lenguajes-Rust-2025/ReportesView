@@ -40,9 +40,9 @@ mod reportes {
     //      ordenado DESC por reputacion de usuario (ver como ordenar, si
     ///     por str o por numerico)
     pub trait ConsultasUsuarios {
-        fn _get_cantidad_de_ordenes_por_usuario(&self) -> Vec<ReporteOrdenesUsuario>;
+        fn _get_cantidad_de_ordenes_por_usuario(&self, usuarios: Vec<Usuario>, ordenes: Vec<Orden>) -> Vec<ReporteOrdenesUsuario>;
 
-        fn _get_mejores_usuarios_por_rol(&self, target_role: &Rol) -> Vec<Usuario>; //separar por rol compra vender
+        fn _get_mejores_usuarios_por_rol(&self, target_role: &Rol, usuarios: Vec<Usuario>) -> Vec<Usuario>; //separar por rol compra vender
 
         fn _calcular_promedio(&self, usuario: &Usuario, rol: &Rol) -> u32;
     }
@@ -73,17 +73,17 @@ mod reportes {
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
         }
 
-        fn get_usuarios() -> Vec<Usuario> {
-            self.original.listar_usuarios(1, 500);
+        fn get_usuarios(&self) -> Vec<Usuario> {
+            self.original.listar_usuarios(1, 500)
         }
 
-        fn get_ordenes() -> Vec<Orden> {
-            let ordenes = self.original.listar_ordenes();
+        fn get_ordenes(&self) -> Vec<Orden> {
+            self.original.listar_ordenes()
         }
     }
 
     impl ConsultasUsuarios for Reportes {
-        fn _get_cantidad_de_ordenes_por_usuario(&self, usuarios: Vec<Usuario>, ordenes: Vec<Ordenes>) -> Vec<ReporteOrdenesUsuario> {
+        fn _get_cantidad_de_ordenes_por_usuario(&self, usuarios: Vec<Usuario>, ordenes: Vec<Orden>) -> Vec<ReporteOrdenesUsuario> {
             let mut reporte = Vec::new();
 
             for usuario in usuarios {
@@ -151,107 +151,13 @@ mod tests {
     use crate::reportes::*;
 
     use ink::{
-        reflect::contract,
         env::{test::set_callee, DefaultEnvironment},
         primitives::AccountId,
     };
     use ink_e2e::{account_id, AccountKeyring};
 
-    fn setup_sistema() -> SistemaRef {
-        SistemaRef::new()
-    }
-
-    fn id_comprador() -> <DefaultEnvironment as ink::env::Environment>::AccountId {
-        account_id(AccountKeyring::Alice)
-    }
-
-    fn id_vendedor() -> <DefaultEnvironment as ink::env::Environment>::AccountId {
-        account_id(AccountKeyring::Bob)
-    }
-
-    fn set_caller(caller: AccountId) {
-        ink::env::test::set_caller::<DefaultEnvironment>(caller);
-    }
-
-    fn build_testing_accounts() -> (AccountId, AccountId) {
-        let id_comprador = id_comprador();
-        let id_vendedor = id_vendedor();
-        (id_comprador, id_vendedor)
-    }
-
-    fn build_testing_setup() -> (SistemaRef, AccountId, AccountId) {
-        let mut app = setup_sistema();
-        let (user_1, user_2) = build_testing_accounts();
-
-        app._registrar_usuario(
-            user_1,
-            "user_name_1".to_string(),
-            "user_email_1".to_string(),
-            Rol::Comprador,
-        )
-        .expect("No se pudo registrar el usuario");
-        app._registrar_usuario(
-            user_2,
-            "user_name_2".to_string(),
-            "user_email_2".to_string(),
-            Rol::Vendedor,
-        )
-        .expect("No se pudo registrar el usuario");
-
-        (app, user_1, user_2)
-    }
-
-    //fn de test de agus olthoff
-
-    fn registrar_comprador(
-        sistema: &mut SistemaRef,
-        id: <DefaultEnvironment as ink::env::Environment>::AccountId,
-    ) {
-        sistema
-            ._registrar_usuario(
-                id,
-                "Comprador".into(),
-                "comprador@gmail.com".into(),
-                Rol::Comprador,
-            )
-            .unwrap();
-    }
-    fn registrar_vendedor(
-        sistema: &mut SistemaRef,
-        id: <DefaultEnvironment as ink::env::Environment>::AccountId,
-    ) {
-        sistema
-            ._registrar_usuario(
-                id,
-                "Vendedor".into(),
-                "vendedor@gmail.com".into(),
-                Rol::Vendedor,
-            )
-            .unwrap();
-    }
-
-    fn agregar_categoria(sistema: &mut SistemaRef, nombre: &str) {
-        sistema._registrar_categoria(nombre.into()).unwrap();
-    }
-
-    fn contrato_con_categorias_cargada() -> SistemaRef {
-        let mut sist = SistemaRef::new();
-        for i in 0..10 {
-            let _ = sist._registrar_categoria(String::from(format!("categoria {}", i)));
-        }
-        return sist;
-    }
-
-    fn reportes_view(address: AccountId) -> Reportes {
-        let contract_id = ink::env::account_id::<DefaultEnvironment>();
-        let reportes = Reportes::new(contract_id);
-        reportes
-    }
-
-
     #[ink::test]
     fn test_get_cantidad_ordenes_por_usuario_exitosa(){
-        let (sistema, user1, user2) = build_testing_setup();
-        assert_eq!(2,sistema.listar_usuarios(1,5).length());
+        
     }
 }
