@@ -135,3 +135,111 @@ mod reportes {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::contract::*;
+    use crate::reportes::*;
+
+    use ink::{
+        env::{test::set_callee, DefaultEnvironment},
+        primitives::AccountId,
+    };
+    use ink_e2e::{account_id, AccountKeyring};
+
+    fn setup_sistema() -> Sistema {
+        Sistema::new()
+    }
+
+    fn id_comprador() -> <DefaultEnvironment as ink::env::Environment>::AccountId {
+        account_id(AccountKeyring::Alice)
+    }
+
+    fn id_vendedor() -> <DefaultEnvironment as ink::env::Environment>::AccountId {
+        account_id(AccountKeyring::Bob)
+    }
+
+    fn set_caller(caller: AccountId) {
+        ink::env::test::set_caller::<DefaultEnvironment>(caller);
+    }
+
+    fn build_testing_accounts() -> (AccountId, AccountId) {
+        let id_comprador = id_comprador();
+        let id_vendedor = id_vendedor();
+        (id_comprador, id_vendedor)
+    }
+
+    fn build_testing_setup() -> (Sistema, AccountId, AccountId) {
+        let mut app = setup_sistema();
+        let (user_1, user_2) = build_testing_accounts();
+
+        app._registrar_usuario(
+            user_1,
+            "user_name_1".to_string(),
+            "user_email_1".to_string(),
+            Rol::Comprador,
+        )
+        .expect("No se pudo registrar el usuario");
+        app._registrar_usuario(
+            user_2,
+            "user_name_2".to_string(),
+            "user_email_2".to_string(),
+            Rol::Vendedor,
+        )
+        .expect("No se pudo registrar el usuario");
+
+        (app, user_1, user_2)
+    }
+
+    //fn de test de agus olthoff
+
+    fn registrar_comprador(
+        sistema: &mut Sistema,
+        id: <DefaultEnvironment as ink::env::Environment>::AccountId,
+    ) {
+        sistema
+            ._registrar_usuario(
+                id,
+                "Comprador".into(),
+                "comprador@gmail.com".into(),
+                Rol::Comprador,
+            )
+            .unwrap();
+    }
+    fn registrar_vendedor(
+        sistema: &mut Sistema,
+        id: <DefaultEnvironment as ink::env::Environment>::AccountId,
+    ) {
+        sistema
+            ._registrar_usuario(
+                id,
+                "Vendedor".into(),
+                "vendedor@gmail.com".into(),
+                Rol::Vendedor,
+            )
+            .unwrap();
+    }
+
+    fn agregar_categoria(sistema: &mut Sistema, nombre: &str) {
+        sistema._registrar_categoria(nombre.into()).unwrap();
+    }
+
+    fn contrato_con_categorias_cargada() -> Sistema {
+        let mut sist = Sistema::new();
+        for i in 0..10 {
+            let _ = sist._registrar_categoria(String::from(format!("categoria {}", i)));
+        }
+        return sist;
+    }
+
+    fn reportes_view(address: AccountId) -> Reportes {
+        let reportes = Reportes::new(ink::env::address());
+        reportes
+    }
+
+
+    #[ink::test]
+    fn test_get_cantidad_ordenes_por_usuario_exitosa(){
+        
+    }
+}
