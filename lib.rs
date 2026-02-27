@@ -73,7 +73,7 @@ mod reportes {
 
     impl ConsultasUsuarios for Reportes {
         fn _get_cantidad_de_ordenes_por_usuario(&self) -> Vec<ReporteOrdenesUsuario> {
-            let usuarios = self.original.listar_usuarios();
+            let usuarios = self.original.listar_usuarios(1, 500);
             let ordenes = self.original.listar_ordenes();
             let mut reporte = Vec::new();
 
@@ -94,7 +94,7 @@ mod reportes {
         }
 
         fn _get_mejores_usuarios_por_rol(&self, target_role: &Rol) -> Vec<Usuario> {
-            let usuarios = self.original.listar_usuarios();
+            let usuarios = self.original.listar_usuarios(1, 500);
             let mut usuarios_filtrados = Vec::new();
 
             //aca filtro usuarios que tengan el target role
@@ -138,10 +138,12 @@ mod reportes {
 
 #[cfg(test)]
 mod tests {
-    use crate::contract::*;
+    //use marketplacedescentralizado::{prelude::*, contract::*};
+    use marketplacedescentralizado::prelude::*;
     use crate::reportes::*;
 
     use ink::{
+        reflect::contract,
         env::{test::set_callee, DefaultEnvironment},
         primitives::AccountId,
     };
@@ -233,7 +235,8 @@ mod tests {
     }
 
     fn reportes_view(address: AccountId) -> Reportes {
-        let reportes = Reportes::new(ink::env::account_id);
+        let contract_id = ink::env::account_id::<DefaultEnvironment>();
+        let reportes = Reportes::new(contract_id);
         reportes
     }
 
@@ -241,6 +244,6 @@ mod tests {
     #[ink::test]
     fn test_get_cantidad_ordenes_por_usuario_exitosa(){
         let (sistema, user1, user2) = build_testing_setup();
-        assert_eq!(2,sistema.listar_usuarios().length());
+        assert_eq!(2,sistema.listar_usuarios(1,5).length());
     }
 }
