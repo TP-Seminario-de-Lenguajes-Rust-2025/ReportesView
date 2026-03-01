@@ -156,8 +156,62 @@ mod tests {
     };
     use ink_e2e::{account_id, AccountKeyring};
 
+    fn generar_vec_usuarios() -> Vec<Usuario> {
+        let mut usuarios = Vec::new();
+
+        let a = Usuario::new(account_id(AccountKeyring::Alice), String::from("Alice"), String::from("alice@email.com"));
+        let b = Usuario::new(account_id(AccountKeyring::Bob), String::from("Bob"), String::from("bob@email.com"));
+        let c = Usuario::new(account_id(AccountKeyring::Charlie), String::from("Charlie"), String::from("Charlie"));
+        usuarios.push(a);
+        usuarios.push(b);
+        usuarios.push(c);
+        usuarios
+    }
+
+    fn generar_vec_orden() -> Vec<Orden> {
+        //alice vende 1 a bob y compra 2 a charlie
+        //charlie compra a bob
+    }
+    fn generar_reporte_ordenes() -> Vec<ReporteOrdenesUsuario>{
+        let mut reporte = Vec::new();
+        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Alice")), cantidad_ordenes: 2 });
+        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Bob")), cantidad_ordenes: 1 });
+        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Charlie")), cantidad_ordenes: 1 });
+        reporte
+    }
+
+    fn setup_entorno() -> (Reportes, Vec<Usuario>, Vec<Orden>, Vec<ReporteOrdenesUsuario>){
+        let reportes = Reportes::new(ink::env::account_id::<DefaultEnvironment>());
+        let usuarios = generar_vec_usuarios();
+        let ordenes = generar_vec_orden();
+        let reporte_ordendes_usuario = generar_reporte_ordenes();
+        (reportes, usuarios, ordenes, reporte_ordenes_usuario)
+    }
+
     #[ink::test]
     fn test_get_cantidad_ordenes_por_usuario_exitosa(){
-        
+        let (reportes, usuarios, ordenes, reporte_ordenes_usuario) = setup_entorno();
+
+        let ordenes_por_usuario = reportes._get_cantidad_de_ordenes_por_usuario(usuarios, ordenes);
+        assert_eq!(ordenes_por_usuario.len(), usuarios.len());
+
+
+        assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
     }
+
+    #[ink::test]
+    fn test_get_cantidad_ordenes_por_usuario_vacio(){
+
+    }
+
+    #[ink::test]
+    fn test_mejores_usuarios_por_rol(){
+
+    }
+
+    #[ink::test]
+    fn test_usuarios_por_rol_sin_usuarios(){
+
+    }
+
 }
