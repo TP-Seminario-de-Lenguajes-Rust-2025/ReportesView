@@ -169,9 +169,25 @@ mod tests {
     }
 
     fn generar_vec_orden() -> Vec<Orden> {
-        //alice vende 1 a bob y compra 2 a charlie
+        let mut ordenes = Vec::new();
+
+        //alice vende 1 a bob 
+        let o1 = Orden::new(1, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Bob), 1, 1);
+
+        //alice compra 2 a charlie
+        let o2 = Orden::new(2, 2, account_id(AccountKeyring::Charlie), account_id(AccountKeyring::Alice), 1, 1);
+        let o3 = Orden::new(3, 3, account_id(AccountKeyring::Charlie), account_id(AccountKeyring::Alice), 1, 1);
+
         //charlie compra a bob
+        let o4 = Orden::new(4, 4, account_id(AccountKeyring::Bob), account_id(AccountKeyring::Charlie), 1, 1);
+
+        ordenes.push(o1);
+        ordenes.push(o2);
+        ordenes.push(o3);
+        ordenes.push(o4);
+        ordenes
     }
+
     fn generar_reporte_ordenes() -> Vec<ReporteOrdenesUsuario>{
         let mut reporte = Vec::new();
         reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Alice")), cantidad_ordenes: 2 });
@@ -184,7 +200,7 @@ mod tests {
         let reportes = Reportes::new(ink::env::account_id::<DefaultEnvironment>());
         let usuarios = generar_vec_usuarios();
         let ordenes = generar_vec_orden();
-        let reporte_ordendes_usuario = generar_reporte_ordenes();
+        let reporte_ordenes_usuario = generar_reporte_ordenes();
         (reportes, usuarios, ordenes, reporte_ordenes_usuario)
     }
 
@@ -192,11 +208,13 @@ mod tests {
     fn test_get_cantidad_ordenes_por_usuario_exitosa(){
         let (reportes, usuarios, ordenes, reporte_ordenes_usuario) = setup_entorno();
 
-        let ordenes_por_usuario = reportes._get_cantidad_de_ordenes_por_usuario(usuarios, ordenes);
+        let ordenes_por_usuario = reportes._get_cantidad_de_ordenes_por_usuario(usuarios.clone(), ordenes.clone());
         assert_eq!(ordenes_por_usuario.len(), usuarios.len());
 
 
-        assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
+        //assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
+        assert_eq!(ordenes_por_usuario.first().unwrap().nombre_usuario, reporte_ordenes_usuario.first().unwrap().nombre_usuario, "nombre de usuario del primero de cada estructura deberia ser el mismo");
+        assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser el mismo");
     }
 
     #[ink::test]
