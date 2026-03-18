@@ -159,6 +159,7 @@ mod tests {
     fn generar_vec_usuarios() -> Vec<Usuario> {
         let mut usuarios = Vec::new();
 
+        // WARN: ESTOS USUARIOS NO TIENEN ROL
         let a = Usuario::new(account_id(AccountKeyring::Alice), String::from("Alice"), String::from("alice@email.com"));
         let b = Usuario::new(account_id(AccountKeyring::Bob), String::from("Bob"), String::from("bob@email.com"));
         let c = Usuario::new(account_id(AccountKeyring::Charlie), String::from("Charlie"), String::from("Charlie"));
