@@ -18,7 +18,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: TP-Seminario-de-Lenguajes-Rust-2025/marketplacedescentralizado
-          path: marketplacedescentralizado
+          path: temp_dep
+
+      - name: Mover dependencia al directorio superior
+        run: mv temp_dep ../marketplacedescentralizado
 
       - name: Generate code coverage
         run: |
