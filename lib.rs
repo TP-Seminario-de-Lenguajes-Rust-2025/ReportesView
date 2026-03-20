@@ -159,7 +159,6 @@ mod tests {
     fn generar_vec_usuarios() -> Vec<Usuario> {
         let mut usuarios = Vec::new();
 
-        // WARN: ESTOS USUARIOS NO TIENEN ROL
         let a = Usuario::new(account_id(AccountKeyring::Alice), String::from("Alice"), String::from("alice@email.com"));
         let b = Usuario::new(account_id(AccountKeyring::Bob), String::from("Bob"), String::from("bob@email.com"));
         let c = Usuario::new(account_id(AccountKeyring::Charlie), String::from("Charlie"), String::from("Charlie"));
@@ -213,6 +212,7 @@ mod tests {
         assert_eq!(ordenes_por_usuario.len(), usuarios.len());
 
 
+        /// maybe this whole section should be a function?
         //assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
         assert_eq!(ordenes_por_usuario.first().unwrap().nombre_usuario, reporte_ordenes_usuario.first().unwrap().nombre_usuario, "nombre de usuario del primero de cada estructura deberia ser el mismo");
         assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser el mismo");
