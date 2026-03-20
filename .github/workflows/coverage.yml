@@ -5,30 +5,44 @@ jobs:
   test:
     name: coverage
     runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
+    # Eliminamos el bloque "container:" para correr libremente en la VM
     steps:
+      # 1. Instalar Rust Nightly (necesario para Ink! y Tarpaulin)
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      # 2. Clonar repo principal en su propia subcarpeta
       - name: Checkout ReportesView
         uses: actions/checkout@v4
         with:
           path: ReportesView
 
+      # 3. Clonar repo dependencia justo al lado (como hermanos)
       - name: Checkout marketplacedescentralizado
         uses: actions/checkout@v4
         with:
           repository: TP-Seminario-de-Lenguajes-Rust-2025/marketplacedescentralizado
-          path: temp_dep
+          path: marketplacedescentralizado
+          # NOTA: Si este repositorio es privado, descomentá la línea de abajo 
+          # y agregá un Personal Access Token.
+          # token: ${{ secrets.PAT_TOKEN }}
 
-      - name: Mover dependencia al directorio superior
-        run: mv temp_dep ../marketplacedescentralizado
+      # 4. Instalar cargo-tarpaulin rápidamente
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+      
+      - name: Install tarpaulin
+        run: cargo binstall -y cargo-tarpaulin
 
+      # 5. Correr Tarpaulin (el ../ ahora funcionará perfecto)
       - name: Generate code coverage
-        run: |
-          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+        working-directory: ./ReportesView
+        run: cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 
+      # 6. Subir a Codecov
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: TP-Seminario-de-Lenguajes-Rust-2025/ReportesView
+          working-directory: ./ReportesView
