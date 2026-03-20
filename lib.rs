@@ -112,7 +112,7 @@ mod reportes {
                 }
             }
             //ordeno  por promedio de mayor a menos
-            usuarios_filtrados.sort_by(|a, b| {
+            usuarios_filtrados.sort_by(|mut a, mut b| {
                 let prom_a = self._calcular_promedio(a, &target_role);
                 let prom_b = self._calcular_promedio(b, &target_role);
                 prom_b.cmp(&prom_a)
@@ -131,8 +131,8 @@ mod reportes {
         //funcion auxialiar para calcular promedio
         fn _calcular_promedio(&self, usuario: &Usuario, rol: &Rol) -> u32 {
             let (puntos, cantidad) = match rol {
-                Rol::Comprador => usuario.rating.calificacion_comprador,
-                Rol::Vendedor => usuario.rating.calificacion_vendedor,
+                Rol::Comprador => usuario.clone().rating.get_calificacion_comprador(),
+                Rol::Vendedor => usuario.clone().rating.get_calificacion_vendedor(),
                 _ => (0, 0),
             };
             if cantidad == 0 {
@@ -211,8 +211,6 @@ mod tests {
         let ordenes_por_usuario = reportes._get_cantidad_de_ordenes_por_usuario(usuarios.clone(), ordenes.clone());
         assert_eq!(ordenes_por_usuario.len(), usuarios.len());
 
-
-        /// maybe this whole section should be a function?
         //assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
         assert_eq!(ordenes_por_usuario.first().unwrap().nombre_usuario, reporte_ordenes_usuario.first().unwrap().nombre_usuario, "nombre de usuario del primero de cada estructura deberia ser el mismo");
         assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser el mismo");
