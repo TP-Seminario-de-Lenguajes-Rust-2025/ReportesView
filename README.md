@@ -1,6 +1,6 @@
 # Trabajo Práctico Final – Marketplace Descentralizado
 
-[![codecov](https://codecov.io/gh/TP-Seminario-de-Lenguajes-Rust-2025/marketplacedescentralizado/branch/main/graph/badge.svg?token=E3K6LDAJJB)](https://codecov.io/gh/TP-Seminario-de-Lenguajes-Rust-2025/marketplacedescentralizado)
+[![codecov](https://codecov.io/github/tp-seminario-de-lenguajes-rust-2025/reportesview/graph/badge.svg?token=pGdj0Fc1Hv)](https://codecov.io/github/tp-seminario-de-lenguajes-rust-2025/reportesview)
 
 **Materia:** Seminario de Lenguajes – Opción Rust  
 **Tecnología:** Rust + Ink! + Substrate  
