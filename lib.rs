@@ -214,7 +214,7 @@ mod tests {
         let ordenes_por_usuario = reportes._get_cantidad_de_ordenes_por_usuario(usuarios.clone(), ordenes.clone());
         assert_eq!(ordenes_por_usuario.len(), usuarios.len(), "largo de los vectores deberia ser igual");
 
-        //assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
+
         assert_eq!(ordenes_por_usuario.first().unwrap().nombre_usuario, reporte_ordenes_usuario.first().unwrap().nombre_usuario, "nombre de usuario del primero de cada estructura deberia ser el mismo");
         assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser la mismo");
 
@@ -239,7 +239,6 @@ mod tests {
         }
     }
 
-    // Mock bypass structures for constructing complete Usuarios with specific Rol & Ratings.
     #[ink::scale_derive(Encode)]
     struct MockRating {
         calificacion_comprador: (u32, u32),
