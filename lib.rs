@@ -161,10 +161,12 @@ mod tests {
 
         let a = Usuario::new(account_id(AccountKeyring::Alice), String::from("Alice"), String::from("alice@email.com"));
         let b = Usuario::new(account_id(AccountKeyring::Bob), String::from("Bob"), String::from("bob@email.com"));
-        let c = Usuario::new(account_id(AccountKeyring::Charlie), String::from("Charlie"), String::from("Charlie"));
+        let c = Usuario::new(account_id(AccountKeyring::Charlie), String::from("Charlie"), String::from("charlie@mail.com"));
+        let d = Usuario::new(account_id(AccountKeyring::Dave), String::from("Dave"), String::from("dave@aol.com"));
         usuarios.push(a);
         usuarios.push(b);
         usuarios.push(c);
+        usuarios.push(d);
         usuarios
     }
 
@@ -193,6 +195,7 @@ mod tests {
         reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Alice")), cantidad_ordenes: 2 });
         reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Bob")), cantidad_ordenes: 1 });
         reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Charlie")), cantidad_ordenes: 1 });
+        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Dave")), cantidad_ordenes: 0 });
         reporte
     }
 
@@ -209,11 +212,14 @@ mod tests {
         let (reportes, usuarios, ordenes, reporte_ordenes_usuario) = setup_entorno();
 
         let ordenes_por_usuario = reportes._get_cantidad_de_ordenes_por_usuario(usuarios.clone(), ordenes.clone());
-        assert_eq!(ordenes_por_usuario.len(), usuarios.len());
+        assert_eq!(ordenes_por_usuario.len(), usuarios.len(), "largo de los vectores deberia ser igual");
 
         //assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
         assert_eq!(ordenes_por_usuario.first().unwrap().nombre_usuario, reporte_ordenes_usuario.first().unwrap().nombre_usuario, "nombre de usuario del primero de cada estructura deberia ser el mismo");
-        assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser el mismo");
+        assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser la mismo");
+
+        assert_eq!(ordenes_por_usuario.clone().pop().unwrap().nombre_usuario, reporte_ordenes_usuario.clone().pop().unwrap().nombre_usuario, "nombre de usuario del ultimo usuario de ambas estructuras deberia ser igual");
+        assert_eq!(ordenes_por_usuario.clone().pop().unwrap().cantidad_ordenes, reporte_ordenes_usuario.clone().pop().unwrap().cantidad_ordenes, "cantidada de ordenes del ultimo usuario de ambas estructuras deberia ser 0");
     }
 
     #[ink::test]
