@@ -112,7 +112,7 @@ mod reportes {
                 }
             }
             //ordeno  por promedio de mayor a menos
-            usuarios_filtrados.sort_by(|mut a, mut b| {
+            usuarios_filtrados.sort_by(|a, b| {
                 let prom_a = self._calcular_promedio(a, &target_role);
                 let prom_b = self._calcular_promedio(b, &target_role);
                 prom_b.cmp(&prom_a)
