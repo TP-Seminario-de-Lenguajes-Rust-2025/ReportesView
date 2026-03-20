@@ -161,10 +161,12 @@ mod tests {
 
         let a = Usuario::new(account_id(AccountKeyring::Alice), String::from("Alice"), String::from("alice@email.com"));
         let b = Usuario::new(account_id(AccountKeyring::Bob), String::from("Bob"), String::from("bob@email.com"));
-        let c = Usuario::new(account_id(AccountKeyring::Charlie), String::from("Charlie"), String::from("Charlie"));
+        let c = Usuario::new(account_id(AccountKeyring::Charlie), String::from("Charlie"), String::from("charlie@mail.com"));
+        let d = Usuario::new(account_id(AccountKeyring::Dave), String::from("Dave"), String::from("dave@aol.com"));
         usuarios.push(a);
         usuarios.push(b);
         usuarios.push(c);
+        usuarios.push(d);
         usuarios
     }
 
@@ -193,6 +195,7 @@ mod tests {
         reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Alice")), cantidad_ordenes: 2 });
         reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Bob")), cantidad_ordenes: 1 });
         reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Charlie")), cantidad_ordenes: 1 });
+        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Dave")), cantidad_ordenes: 0 });
         reporte
     }
 
@@ -209,26 +212,97 @@ mod tests {
         let (reportes, usuarios, ordenes, reporte_ordenes_usuario) = setup_entorno();
 
         let ordenes_por_usuario = reportes._get_cantidad_de_ordenes_por_usuario(usuarios.clone(), ordenes.clone());
-        assert_eq!(ordenes_por_usuario.len(), usuarios.len());
+        assert_eq!(ordenes_por_usuario.len(), usuarios.len(), "largo de los vectores deberia ser igual");
 
-        //assert!(matches!(ordenes_por_usuario.first(), &reporte_ordenes_usuario.first())); //no estoy seguro de esto
+
         assert_eq!(ordenes_por_usuario.first().unwrap().nombre_usuario, reporte_ordenes_usuario.first().unwrap().nombre_usuario, "nombre de usuario del primero de cada estructura deberia ser el mismo");
-        assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser el mismo");
+        assert_eq!(ordenes_por_usuario.first().unwrap().cantidad_ordenes, reporte_ordenes_usuario.first().unwrap().cantidad_ordenes, "cantidad de ordenes del primero de cada estructura deberia ser la mismo");
+
+        assert_eq!(ordenes_por_usuario.clone().pop().unwrap().nombre_usuario, reporte_ordenes_usuario.clone().pop().unwrap().nombre_usuario, "nombre de usuario del ultimo usuario de ambas estructuras deberia ser igual");
+        assert_eq!(ordenes_por_usuario.clone().pop().unwrap().cantidad_ordenes, reporte_ordenes_usuario.clone().pop().unwrap().cantidad_ordenes, "cantidada de ordenes del ultimo usuario de ambas estructuras deberia ser 0");
     }
 
     #[ink::test]
     fn test_get_cantidad_ordenes_por_usuario_vacio(){
+        let (reportes, _usuarios, _ordenes, _reporte_ordenes_usuario) = setup_entorno();
 
+        let usuarios_vacios = Vec::new();
+        let ordenes_vacias = Vec::new();
+
+        let resultado1 = reportes._get_cantidad_de_ordenes_por_usuario(usuarios_vacios, _ordenes.clone());
+        assert_eq!(resultado1.len(), 0, "Si no hay usuarios, el reporte debe estar vacío");
+
+        let resultado2 = reportes._get_cantidad_de_ordenes_por_usuario(_usuarios.clone(), ordenes_vacias);
+        assert_eq!(resultado2.len(), _usuarios.len(), "Debe haber una entrada por usuario aunque no tengan ordenes");
+        for reporte in resultado2 {
+            assert_eq!(reporte.cantidad_ordenes, 0, "Las ordenes deben ser 0 para todos en coleccion vacia de ordenes");
+        }
+    }
+
+    #[ink::scale_derive(Encode)]
+    struct MockRating {
+        calificacion_comprador: (u32, u32),
+        calificacion_vendedor: (u32, u32),
+    }
+
+    #[ink::scale_derive(Encode)]
+    struct MockUsuario {
+        id: AccountId,
+        nombre: String,
+        mail: String,
+        rating: MockRating,
+        roles: Vec<Rol>,
+    }
+
+    fn create_mock_usuario(id: AccountId, nombre: &str, mail: &str, roles: Vec<Rol>, c_comp: (u32, u32), c_vend: (u32, u32)) -> Usuario {
+        let mock_rating = MockRating {
+            calificacion_comprador: c_comp,
+            calificacion_vendedor: c_vend,
+        };
+        let mock = MockUsuario {
+            id,
+            nombre: String::from(nombre),
+            mail: String::from(mail),
+            rating: mock_rating,
+            roles,
+        };
+        let encoded = ink::scale::Encode::encode(&mock);
+        ink::scale::Decode::decode(&mut &encoded[..]).unwrap()
     }
 
     #[ink::test]
     fn test_mejores_usuarios_por_rol(){
+        let (reportes, _, _, _) = setup_entorno();
 
+        // Creamos usuarios con puntajes especificos (Valor Acumulado, Cantidad de Reseñas)
+        // Promedio Vendedor = (Acumulado) / Cantidad
+        let u1 = create_mock_usuario(account_id(AccountKeyring::Alice), "Alice", "a@a.com", vec![Rol::Vendedor], (0, 0), (50, 10)); // Prom: 5
+        let u2 = create_mock_usuario(account_id(AccountKeyring::Bob), "Bob", "b@b.com", vec![Rol::Vendedor], (0, 0), (20, 10)); // Prom: 2
+        let u3 = create_mock_usuario(account_id(AccountKeyring::Charlie), "Charlie", "c@c.com", vec![Rol::Vendedor], (0, 0), (40, 10)); // Prom: 4
+        let u4 = create_mock_usuario(account_id(AccountKeyring::Dave), "Dave", "d@d.com", vec![Rol::Vendedor], (0, 0), (10, 10)); // Prom: 1
+        let u5 = create_mock_usuario(account_id(AccountKeyring::Eve), "Eve", "e@e.com", vec![Rol::Vendedor, Rol::Comprador], (0, 0), (30, 10)); // Prom: 3
+        let u6 = create_mock_usuario(account_id(AccountKeyring::Ferdie), "Ferdie", "f@f.com", vec![Rol::Vendedor], (0, 0), (60, 10)); // Prom: 6
+        
+        let usuarios = vec![u1, u2, u3, u4, u5, u6];
+
+        let mejores = reportes._get_mejores_usuarios_por_rol(&Rol::Vendedor, usuarios);
+        
+        // Verifica que no exceda 5
+        assert_eq!(mejores.len(), 5);
+
+        // Verifica el ordenamiento descendente correcto: u6 (6), u1 (5), u3 (4), u5 (3), u2 (2). u4 (1) queda fuera.
+        assert_eq!(mejores[0].get_name(), "Ferdie");
+        assert_eq!(mejores[1].get_name(), "Alice");
+        assert_eq!(mejores[4].get_name(), "Bob");
     }
 
     #[ink::test]
     fn test_usuarios_por_rol_sin_usuarios(){
+        let (reportes, _, _, _) = setup_entorno();
+        let usuarios = Vec::new();
 
+        let mejores = reportes._get_mejores_usuarios_por_rol(&Rol::Comprador, usuarios);
+        assert_eq!(mejores.len(), 0, "No debe retornar nada al pasar un vector vacio");
     }
 
 }
