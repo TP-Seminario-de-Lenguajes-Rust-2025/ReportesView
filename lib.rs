@@ -89,6 +89,17 @@ mod reportes {
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
         }
 
+        /// TODO
+        #[ink(message)]
+        pub fn get_estadisticas_por_categoria(&self) -> Vec<EstadisticasCategoria> {
+            let categorias = self.original.listar_categorias();
+            let productos = self.original.listar_productos();
+            let publicaciones = self.original.listar_publicaciones();
+            let ordenes = self.get_ordenes();
+
+            self._get_estadisticas_por_categoria(categorias, productos, publicaciones, ordenes):
+        }
+
         fn get_usuarios(&self) -> Vec<Usuario> {
             self.original.listar_usuarios(1, 500)
         }
