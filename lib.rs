@@ -624,4 +624,153 @@ mod tests {
         assert_eq!(top.len(), 0, "Debe manejar correctamente las colecciones vacías sin crashear");
     }
 
-}
+    // ==========================================
+    // TESTS UNITARIOS: ESTADISTICAS POR CATEGORIA
+    // ==========================================
+
+    // version de crear_orden_mock que permite setear calificaciones
+    fn crear_orden_mock_con_cal(
+        id: u32,
+        id_publicacion: u32,
+        id_vendedor: AccountId,
+        id_comprador: AccountId,
+        cantidad: u32,
+        status: EstadoOrden,
+        cal_vendedor: Option<u8>,
+        cal_comprador: Option<u8>,
+    ) -> Orden {
+        let mock = MockOrden {
+            id,
+            id_publicacion,
+            id_vendedor,
+            id_comprador,
+            status,
+            cantidad,
+            precio_total: 1000,
+            cal_vendedor,
+            cal_comprador,
+        };
+        let encoded = ink::scale::Encode::encode(&mock);
+        ink::scale::Decode::decode(&mut &encoded[..]).unwrap()
+    }
+
+    // categorias para usar en los tests de estadisticas
+    fn generar_categorias_test() -> Vec<Categoria> {
+        vec![
+            Categoria::new(0, "Indumentaria".into()),
+            Categoria::new(1, "Electronica".into()),
+        ]
+    }
+
+    // productos repartidos en las 2 categorias
+    fn generar_productos_por_categoria() -> Vec<Producto> {
+        vec![
+            // categoria 0 (Indumentaria)
+            Producto::new(0, account_id(AccountKeyring::Alice), "Remera".into(), "Desc".into(), 0, 50),
+            Producto::new(1, account_id(AccountKeyring::Alice), "Pantalon".into(), "Desc".into(), 0, 30),
+            // categoria 1 (Electronica)
+            Producto::new(2, account_id(AccountKeyring::Bob), "Auriculares".into(), "Desc".into(), 1, 20),
+        ]
+    }
+
+    fn generar_publicaciones_por_categoria() -> Vec<Publicacion> {
+        vec![
+            Publicacion::new(0, 0, account_id(AccountKeyring::Alice), 50, 100),  // pub 0 -> Remera
+            Publicacion::new(1, 1, account_id(AccountKeyring::Alice), 30, 200),  // pub 1 -> Pantalon
+            Publicacion::new(2, 2, account_id(AccountKeyring::Bob), 20, 500),    // pub 2 -> Auriculares
+        ]
+    }
+
+    #[ink::test]
+    fn test_estadisticas_por_categoria_caso_normal() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        let categorias = generar_categorias_test();
+        let productos = generar_productos_por_categoria();
+        let publicaciones = generar_publicaciones_por_categoria();
+
+        // armo ordenes recibidas con calificacion
+        // 2 ordenes de Indumentaria (pub 0 y 1), 1 de Electronica (pub 2)
+        let ordenes = vec![
+            crear_orden_mock_con_cal(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 3, EstadoOrden::Recibida, Some(4), None),
+            crear_orden_mock_con_cal(1, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 2, EstadoOrden::Recibida, Some(2), None),
+            crear_orden_mock_con_cal(2, 2, account_id(AccountKeyring::Bob), account_id(AccountKeyring::Charlie), 1, EstadoOrden::Recibida, Some(5), None),
+        ];
+
+        let stats = reportes._get_estadisticas_por_categoria(categorias, productos, publicaciones, ordenes);
+
+        // tiene que haber una entrada por categoria
+        assert_eq!(stats.len(), 2);
+
+        // Indumentaria: 3 + 2 = 5 ventas, promedio cal = (4+2)*10/2 = 30
+        assert_eq!(stats[0].nombre_categoria, "Indumentaria");
+        assert_eq!(stats[0].ventas_entregadas, 5);
+        assert_eq!(stats[0].calificacion_promedio, 30); // (4+2)*10 / 2
+
+        // Electronica: 1 venta, promedio cal = 5*10/1 = 50
+        assert_eq!(stats[1].nombre_categoria, "Electronica");
+        assert_eq!(stats[1].ventas_entregadas, 1);
+        assert_eq!(stats[1].calificacion_promedio, 50);
+    }
+
+    #[ink::test]
+    fn test_estadisticas_por_categoria_sin_ordenes() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        let categorias = generar_categorias_test();
+        let productos = generar_productos_por_categoria();
+        let publicaciones = generar_publicaciones_por_categoria();
+
+        // sin ordenes -> todo en 0
+        let stats = reportes._get_estadisticas_por_categoria(categorias, productos, publicaciones, vec![]);
+
+        assert_eq!(stats.len(), 2);
+        for s in &stats {
+            assert_eq!(s.ventas_entregadas, 0);
+            assert_eq!(s.calificacion_promedio, 0);
+        }
+    }
+
+    #[ink::test]
+    fn test_estadisticas_por_categoria_ignora_no_recibidas() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        let categorias = generar_categorias_test();
+        let productos = generar_productos_por_categoria();
+        let publicaciones = generar_publicaciones_por_categoria();
+
+        // todas las ordenes estan pendientes o canceladas, no deberian contar
+        let ordenes = vec![
+            crear_orden_mock_con_cal(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 5, EstadoOrden::Pendiente, Some(3), None),
+            crear_orden_mock_con_cal(1, 2, account_id(AccountKeyring::Bob), account_id(AccountKeyring::Dave), 2, EstadoOrden::Cancelada, Some(5), None),
+        ];
+
+        let stats = reportes._get_estadisticas_por_categoria(categorias, productos, publicaciones, ordenes);
+
+        for s in &stats {
+            assert_eq!(s.ventas_entregadas, 0, "no deberia contar ventas de ordenes que no estan recibidas");
+            assert_eq!(s.calificacion_promedio, 0);
+        }
+    }
+
+    #[ink::test]
+    fn test_estadisticas_por_categoria_sin_calificaciones() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        let categorias = generar_categorias_test();
+        let productos = generar_productos_por_categoria();
+        let publicaciones = generar_publicaciones_por_categoria();
+
+        // ordenes recibidas pero nadie califico
+        let ordenes = vec![
+            crear_orden_mock_con_cal(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 4, EstadoOrden::Recibida, None, None),
+            crear_orden_mock_con_cal(1, 2, account_id(AccountKeyring::Bob), account_id(AccountKeyring::Dave), 2, EstadoOrden::Recibida, None, None),
+        ];
+
+        let stats = reportes._get_estadisticas_por_categoria(categorias, productos, publicaciones, ordenes);
+
+        // las ventas se suman igual, pero el promedio queda en 0 porque no hay calificaciones
+        assert_eq!(stats[0].ventas_entregadas, 4); // Indumentaria
+        assert_eq!(stats[0].calificacion_promedio, 0);
+
+        assert_eq!(stats[1].ventas_entregadas, 2); // Electronica
+        assert_eq!(stats[1].calificacion_promedio, 0);
+    }
+
+}
