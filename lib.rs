@@ -82,7 +82,7 @@ mod reportes {
             self._get_cantidad_de_ordenes_por_usuario(usuarios, ordenes)
         }
 
-        
+        /// Devuelve los 5 usuarios mejor calificados en cada rol
         #[ink(message)]
         pub fn get_mejores_usuarios_por_rol(&self, target_role: Rol) -> Vec<Usuario> {
             let usuarios = self.get_usuarios();
