@@ -97,7 +97,7 @@ mod reportes {
             let publicaciones = self.original.listar_publicaciones();
             let ordenes = self.get_ordenes();
 
-            self._get_estadisticas_por_categoria(categorias, productos, publicaciones, ordenes):
+            self._get_estadisticas_por_categoria(categorias, productos, publicaciones, ordenes)
         }
 
         fn get_usuarios(&self) -> Vec<Usuario> {
@@ -181,9 +181,9 @@ mod reportes {
             let mut reporte = Vec::new();
             
             for cat in categorias {
-                let mut ventas_entregadas = 0;
-                let mut suma_calificaciones = 0;
-                let mut cantidad_calificaciones = 0;
+                let mut ventas_entregadas: u32 = 0;
+                let mut suma_calificaciones: u32 = 0;
+                let mut cantidad_calificaciones: u32 = 0;
                 
                 for orden in &ordenes {
 
@@ -195,7 +195,7 @@ mod reportes {
                         for publi in &publicaciones {
                             if publi.get_id() == orden.get_id_publicacion() {
                                 for prod in &productos {
-                                    if prod.get_id() == publi.get_id_prod() && prod.get_id_cat() == cat.get_id() {
+                                    if prod.get_id() == publi.get_id_producto() && prod.get_id_categoria() == cat.get_id() {
                                         pertenece_a_cat = true;
                                         break;
                                     }
@@ -208,7 +208,7 @@ mod reportes {
                             ventas_entregadas = ventas_entregadas.saturating_add(orden.get_cantidad());
                             // get_calificacion_vendedor devuelve la calificacion que recibe el vendedor (i.e. la que recibe el producto)
                             if let Some(cal) = orden.get_calificacion_vendedor() {
-                                suma_calificaciones = suma_calificaicones.saturating_add(cal as u32); // casteo de u8 a u32 
+                                suma_calificaciones = suma_calificaciones.saturating_add(cal as u32); // casteo de u8 a u32 
                                 cantidad_calificaciones = cantidad_calificaciones.saturating_add(1);
                             }
                         }
@@ -216,7 +216,7 @@ mod reportes {
                 }
                 
                 let calificacion_promedio = if cantidad_calificaciones > 0 {
-                    suma_calificaiones.checked_mul(10).checked_div(cantidad_calificaciones);
+                    (suma_calificaciones.saturating_mul(10)).checked_div(cantidad_calificaciones).unwrap_or(0)
                 } else { 0 };
 
                 reporte.push(EstadisticasCategoria {
