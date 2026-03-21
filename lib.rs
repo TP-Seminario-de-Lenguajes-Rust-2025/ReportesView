@@ -15,6 +15,15 @@ mod reportes {
         pub cantidad_ordenes: u32,
     }
 
+    #[ink::scale_derive(Encode, Decode, TypeInfo)]
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct EstadisticasCategoria {
+        pub categoria_id: u32,
+        pub nombre_categoria: String,
+        pub ventas_entregadas: u32,
+        pub calificacion_promedio: u32, 
+    }
+
     //TODO: Los tipos de retorno son genericos. Hay que crear
     //      un struct que contenga producto_id, nombre del producto
     //      y cantidad total de ventas (entregadas).
@@ -27,7 +36,13 @@ mod reportes {
     //      y cantidad total de ventas (entregadas) de la categoria
     //      y calificacion promedio de la categoria. Se retorna un Vec.
     pub trait ConsultasCategorias {
-        fn _get_estadisticas_por_categoria(&self, categoria: &str) -> Vec<String>;
+        fn _get_estadisticas_por_categoria(
+            &self, 
+            categorias: Vec<Categoria>,
+            productos: Vec<Producto>,
+            publicaciones: Vec<Publicacion>,
+            ordenes: Vec<Orden>,
+        ) -> Vec<EstadisticasCategoria>;
     }
 
     //TODO: Los tipos de retorno son genericos. Hay que crear
@@ -67,6 +82,7 @@ mod reportes {
             self._get_cantidad_de_ordenes_por_usuario(usuarios, ordenes)
         }
 
+        
         #[ink(message)]
         pub fn get_mejores_usuarios_por_rol(&self, target_role: Rol) -> Vec<Usuario> {
             let usuarios = self.get_usuarios();
