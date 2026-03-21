@@ -81,10 +81,6 @@ mod reportes {
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
         }
 
-        fn get_producto(&self, id_producto: u32) -> Option<Producto> {
-            self.original.obtener_producto(id_producto)
-        }
-
         fn get_usuarios(&self) -> Vec<Usuario> {
             self.original.listar_usuarios(1, 500)
         }
