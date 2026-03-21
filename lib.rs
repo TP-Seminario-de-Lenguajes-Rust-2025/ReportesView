@@ -101,7 +101,7 @@ mod reportes {
         }
 
         fn get_usuarios(&self) -> Vec<Usuario> {
-            self.original.listar_usuarios(1, 500)
+            self.original.listar_usuarios(0, 0)
         }
 
         fn get_ordenes(&self) -> Vec<Orden> {
