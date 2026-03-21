@@ -16,6 +16,15 @@ mod reportes {
     }
 
     #[ink::scale_derive(Encode, Decode, TypeInfo)]
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct EstadisticasCategoria {
+        pub categoria_id: u32,
+        pub nombre_categoria: String,
+        pub ventas_entregadas: u32,
+        pub calificacion_promedio: u32, 
+    }
+  
+    #[ink::scale_derive(Encode, Decode, TypeInfo)]
     #[derive(Clone)]
     pub struct ProductosVendidos {
         pub id_producto: u32,
@@ -41,7 +50,13 @@ mod reportes {
     //      y cantidad total de ventas (entregadas) de la categoria
     //      y calificacion promedio de la categoria. Se retorna un Vec.
     pub trait ConsultasCategorias {
-        fn _get_estadisticas_por_categoria(&self, categoria: &str) -> Vec<String>;
+        fn _get_estadisticas_por_categoria(
+            &self, 
+            categorias: Vec<Categoria>,
+            productos: Vec<Producto>,
+            publicaciones: Vec<Publicacion>,
+            ordenes: Vec<Orden>,
+        ) -> Vec<EstadisticasCategoria>;
     }
 
     //TODO: Los tipos de retorno son genericos. Hay que crear
@@ -81,6 +96,7 @@ mod reportes {
             self._get_cantidad_de_ordenes_por_usuario(usuarios, ordenes)
         }
 
+        /// Devuelve los 5 usuarios mejor calificados en cada rol
         #[ink(message)]
         pub fn get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos> {
             let ordenes = self.original.listar_ordenes();
@@ -95,8 +111,19 @@ mod reportes {
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
         }
 
+        /// TODO
+        #[ink(message)]
+        pub fn get_estadisticas_por_categoria(&self) -> Vec<EstadisticasCategoria> {
+            let categorias = self.original.listar_categorias();
+            let productos = self.original.listar_productos();
+            let publicaciones = self.original.listar_publicaciones();
+            let ordenes = self.get_ordenes();
+
+            self._get_estadisticas_por_categoria(categorias, productos, publicaciones, ordenes)
+        }
+
         fn get_usuarios(&self) -> Vec<Usuario> {
-            self.original.listar_usuarios(1, 500)
+            self.original.listar_usuarios(0, 0)
         }
 
         fn get_ordenes(&self) -> Vec<Orden> {
@@ -225,6 +252,66 @@ mod reportes {
             } else {
                 puntos.checked_div(cantidad).unwrap_or(0)
             }
+        }
+    }
+
+    impl ConsultasCategorias for Reportes {
+        fn _get_estadisticas_por_categoria(
+            &self, 
+            categorias: Vec<Categoria>,
+            productos: Vec<Producto>,
+            publicaciones: Vec<Publicacion>,
+            ordenes: Vec<Orden>,
+        ) -> Vec<EstadisticasCategoria> {
+            let mut reporte = Vec::new();
+            
+            for cat in categorias {
+                let mut ventas_entregadas: u32 = 0;
+                let mut suma_calificaciones: u32 = 0;
+                let mut cantidad_calificaciones: u32 = 0;
+                
+                for orden in &ordenes {
+
+                    // se cuentan solamente las ordenes recibidas
+                    if orden.get_status() == EstadoOrden::Recibida {
+                        let mut pertenece_a_cat = false;
+
+                        // se busca la categoria a partir de orden (Orden -> id Publicacion -> id Producto -> id Categoria)
+                        for publi in &publicaciones {
+                            if publi.get_id() == orden.get_id_publicacion() {
+                                for prod in &productos {
+                                    if prod.get_id() == publi.get_id_producto() && prod.get_id_categoria() == cat.get_id() {
+                                        pertenece_a_cat = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                        if pertenece_a_cat {
+                            ventas_entregadas = ventas_entregadas.saturating_add(orden.get_cantidad());
+                            // get_calificacion_vendedor devuelve la calificacion que recibe el vendedor (i.e. la que recibe el producto)
+                            if let Some(cal) = orden.get_calificacion_vendedor() {
+                                suma_calificaciones = suma_calificaciones.saturating_add(cal as u32); // casteo de u8 a u32 
+                                cantidad_calificaciones = cantidad_calificaciones.saturating_add(1);
+                            }
+                        }
+                    }
+                }
+                
+                let calificacion_promedio = if cantidad_calificaciones > 0 {
+                    (suma_calificaciones.saturating_mul(10)).checked_div(cantidad_calificaciones).unwrap_or(0)
+                } else { 0 };
+
+                reporte.push(EstadisticasCategoria {
+                    categoria_id: cat.get_id(),
+                    nombre_categoria: cat.get_nombre(),
+                    ventas_entregadas,
+                    calificacion_promedio
+                });
+            }
+            reporte
         }
     }
 }
