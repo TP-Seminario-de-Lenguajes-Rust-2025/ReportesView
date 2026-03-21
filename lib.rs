@@ -284,45 +284,6 @@ mod tests {
         reporte
     }
 
-    fn generar_productos_mock() -> Vec<Producto> {
-        vec![
-            Producto::new(0, account_id(AccountKeyring::Alice), "Zapatillas".into(), "Desc".into(), 1, 10),
-            Producto::new(1, account_id(AccountKeyring::Alice), "Remera".into(), "Desc".into(), 1, 10),
-            Producto::new(2, account_id(AccountKeyring::Bob), "Pantalon".into(), "Desc".into(), 1, 10),
-        ]
-    }
-
-    fn generar_publicaciones_mock() -> Vec<Publicacion> {
-        vec![
-            Publicacion::new(0, 0, account_id(AccountKeyring::Alice), 10, 100), // pub 0 -> prod 0 (Zapatillas)
-            Publicacion::new(1, 1, account_id(AccountKeyring::Alice), 10, 50),  // pub 1 -> prod 1 (Remera)
-            Publicacion::new(2, 2, account_id(AccountKeyring::Bob), 10, 200),   // pub 2 -> prod 2 (Pantalon)
-            Publicacion::new(3, 0, account_id(AccountKeyring::Alice), 5, 120),  // pub 3 -> prod 0 (Zapatillas)
-        ]
-    }
-
-    fn generar_ordenes_mock() -> Vec<Orden> {
-        // Zapatillas (Pub 0 y 3): 2 ventas + 3 ventas = 5 en total.
-        let mut o1 = Orden::new(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 2, 200);
-        o1.status = EstadoOrden::Recibida;
-
-        let mut o2 = Orden::new(1, 3, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 3, 360);
-        o2.status = EstadoOrden::Recibida;
-
-        // Remera (Pub 1): 1 venta recibida y 10 pendientes (no deben sumar)
-        let mut o3 = Orden::new(2, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 1, 50);
-        o3.status = EstadoOrden::Recibida;
-
-        let mut o4 = Orden::new(3, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 10, 500);
-        o4.status = EstadoOrden::Pendiente; // No debe sumarse al total
-
-        // Pantalon (Pub 2): 4 ventas
-        let mut o5 = Orden::new(4, 2, account_id(AccountKeyring::Bob), account_id(AccountKeyring::Charlie), 4, 800);
-        o5.status = EstadoOrden::Recibida;
-
-        vec![o1, o2, o3, o4, o5]
-    }
-
     fn setup_entorno() -> (Reportes, Vec<Usuario>, Vec<Orden>, Vec<ReporteOrdenesUsuario>){
         let reportes = Reportes::new(ink::env::account_id::<DefaultEnvironment>());
         let usuarios = generar_vec_usuarios();
@@ -429,6 +390,87 @@ mod tests {
         assert_eq!(mejores.len(), 0, "No debe retornar nada al pasar un vector vacio");
     }
 
+    // ==========================================
+    // MOCK PARA SALTEAR LA PRIVACIDAD DE ORDEN
+    // ==========================================
+
+    #[ink::scale_derive(Encode)]
+    struct MockOrden {
+        id: u32,
+        id_publicacion: u32,
+        id_vendedor: AccountId,
+        id_comprador: AccountId,
+        status: EstadoOrden,
+        cantidad: u32,
+        precio_total: Balance,
+        cal_vendedor: Option<u8>,
+        cal_comprador: Option<u8>,
+    }
+
+    // Helper que usa tu mismo truco de serialización para crear una Orden con cualquier estado
+    fn crear_orden_mock(
+        id: u32,
+        id_publicacion: u32,
+        id_vendedor: AccountId,
+        id_comprador: AccountId,
+        cantidad: u32,
+        status: EstadoOrden,
+    ) -> Orden {
+        let mock = MockOrden {
+            id,
+            id_publicacion,
+            id_vendedor,
+            id_comprador,
+            status,
+            cantidad,
+            precio_total: 1000, // Valor irrelevante para este test
+            cal_vendedor: None,
+            cal_comprador: None,
+        };
+        let encoded = ink::scale::Encode::encode(&mock);
+        ink::scale::Decode::decode(&mut &encoded[..]).unwrap()
+    }
+
+    // ==========================================
+    // HELPERS PARA GENERAR VECTORES DE PRUEBA
+    // ==========================================
+
+    fn generar_productos_mock() -> Vec<Producto> {
+        vec![
+            Producto::new(0, account_id(AccountKeyring::Alice), "Zapatillas".into(), "Desc".into(), 1, 10),
+            Producto::new(1, account_id(AccountKeyring::Alice), "Remera".into(), "Desc".into(), 1, 10),
+            Producto::new(2, account_id(AccountKeyring::Bob), "Pantalon".into(), "Desc".into(), 1, 10),
+        ]
+    }
+
+    fn generar_publicaciones_mock() -> Vec<Publicacion> {
+        vec![
+            Publicacion::new(0, 0, account_id(AccountKeyring::Alice), 10, 100), // pub 0 -> prod 0 (Zapatillas)
+            Publicacion::new(1, 1, account_id(AccountKeyring::Alice), 10, 50),  // pub 1 -> prod 1 (Remera)
+            Publicacion::new(2, 2, account_id(AccountKeyring::Bob), 10, 200),   // pub 2 -> prod 2 (Pantalon)
+            Publicacion::new(3, 0, account_id(AccountKeyring::Alice), 5, 120),  // pub 3 -> prod 0 (Zapatillas)
+        ]
+    }
+
+    fn generar_ordenes_mock() -> Vec<Orden> {
+        // Zapatillas (Pub 0 y 3): 2 ventas + 3 ventas = 5 en total. Ambas RECIBIDAS.
+        let o1 = crear_orden_mock(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 2, EstadoOrden::Recibida);
+        let o2 = crear_orden_mock(1, 3, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 3, EstadoOrden::Recibida);
+
+        // Remera (Pub 1): 1 venta RECIBIDA y 1 venta PENDIENTE (la pendiente de 10 unidades se debe ignorar)
+        let o3 = crear_orden_mock(2, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 1, EstadoOrden::Recibida);
+        let o4 = crear_orden_mock(3, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 10, EstadoOrden::Pendiente);
+
+        // Pantalon (Pub 2): 4 ventas RECIBIDAS
+        let o5 = crear_orden_mock(4, 2, account_id(AccountKeyring::Bob), account_id(AccountKeyring::Charlie), 4, EstadoOrden::Recibida);
+
+        vec![o1, o2, o3, o4, o5]
+    }
+
+    // ==========================================
+    // TESTS UNITARIOS: PRODUCTOS MAS VENDIDOS
+    // ==========================================
+
     #[ink::test]
     fn test_get_productos_mas_vendidos_exito_y_ordenamiento() {
         let reportes = Reportes::new(account_id(AccountKeyring::Alice));
@@ -450,7 +492,7 @@ mod tests {
         assert_eq!(top[1].cantidad_ventas, 4);
 
         assert_eq!(top[2].nombre_producto, "Remera");
-        assert_eq!(top[2].cantidad_ventas, 1, "La remera solo debe tener 1 venta, ignorando las Pendientes");
+        assert_eq!(top[2].cantidad_ventas, 1, "La remera solo debe tener 1 venta, ignorando la orden Pendiente");
     }
 
     #[ink::test]
@@ -473,26 +515,26 @@ mod tests {
         let reportes = Reportes::new(account_id(AccountKeyring::Alice));
         let productos = generar_productos_mock();
         let publicaciones = generar_publicaciones_mock();
-        let mut ordenes = generar_ordenes_mock();
-
-        // Volvemos todas las órdenes "Pendientes"
-        for o in &mut ordenes {
-            o.status = EstadoOrden::Pendiente;
-        }
+        
+        // Creamos ordenes que son SOLO pendientes o canceladas
+        let ordenes = vec![
+            crear_orden_mock(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 5, EstadoOrden::Pendiente),
+            crear_orden_mock(1, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 2, EstadoOrden::Cancelada),
+        ];
 
         let top = reportes._get_productos_mas_vendidos(10, ordenes, publicaciones, productos);
 
-        assert_eq!(top.len(), 0, "Si no hay ventas 'Recibidas', el vector debe estar vacío");
+        assert_eq!(top.len(), 0, "Si no hay ventas 'Recibidas', el vector final debe estar vacío");
     }
 
     #[ink::test]
     fn test_get_productos_mas_vendidos_listas_vacias() {
         let reportes = Reportes::new(account_id(AccountKeyring::Alice));
         
-        // Simular bases de datos vacías
+        // Simular bases de datos vacías para asegurar que no tire panic
         let top = reportes._get_productos_mas_vendidos(10, vec![], vec![], vec![]);
 
-        assert_eq!(top.len(), 0, "Debe manejar correctamente las colecciones vacías sin paniquear");
+        assert_eq!(top.len(), 0, "Debe manejar correctamente las colecciones vacías sin crashear");
     }
 
 }
