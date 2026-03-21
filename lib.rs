@@ -138,7 +138,7 @@ mod reportes {
                             let mut nombre_real = String::from("Producto Desconocido");
                             for prod in &productos {
                                 if prod.get_id() == id_prod {
-                                    nombre_real = prod.nombre.clone();
+                                    nombre_real = prod.get_nombre();
                                     break;
                                 }
                             }
