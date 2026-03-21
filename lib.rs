@@ -169,6 +169,66 @@ mod reportes {
             }
         }
     }
+
+    impl ConsultasCategorias for Reportes {
+        fn _get_estadisticas_por_categoria(
+            &self, 
+            categorias: Vec<Categoria>,
+            productos: Vec<Producto>,
+            publicaciones: Vec<Publicacion>,
+            ordenes: Vec<Orden>,
+        ) -> Vec<EstadisticasCategoria> {
+            let mut reporte = Vec::new();
+            
+            for cat in categorias {
+                let mut ventas_entregadas = 0;
+                let mut suma_calificaciones = 0;
+                let mut cantidad_calificaciones = 0;
+                
+                for orden in &ordenes {
+
+                    // se cuentan solamente las ordenes recibidas
+                    if orden.get_status() == EstadoOrden::Recibida {
+                        let mut pertenece_a_cat = false;
+
+                        // se busca la categoria a partir de orden (Orden -> id Publicacion -> id Producto -> id Categoria)
+                        for publi in &publicaciones {
+                            if publi.get_id() == orden.get_id_publicacion() {
+                                for prod in &productos {
+                                    if prod.get_id() == publi.get_id_prod() && prod.get_id_cat() == cat.get_id() {
+                                        pertenece_a_cat = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                        if pertenece_a_cat {
+                            ventas_entregadas = ventas_entregadas.saturating_add(orden.get_cantidad());
+                            // get_calificacion_vendedor devuelve la calificacion que recibe el vendedor (i.e. la que recibe el producto)
+                            if let Some(cal) = orden.get_calificacion_vendedor() {
+                                suma_calificaciones = suma_calificaicones.saturating_add(cal as u32); // casteo de u8 a u32 
+                                cantidad_calificaciones = cantidad_calificaciones.saturating_add(1);
+                            }
+                        }
+                    }
+                }
+                
+                let calificacion_promedio = if cantidad_calificaciones > 0 {
+                    suma_calificaiones.checked_mul(10).checked_div(cantidad_calificaciones);
+                } else { 0 };
+
+                reporte.push(EstadisticasCategoria {
+                    categoria_id: cat.get_id(),
+                    nombre_categoria: cat.get_nombre(),
+                    ventas_entregadas,
+                    calificacion_promedio
+                });
+            }
+            reporte
+        }
+    }
 }
 
 #[cfg(test)]
