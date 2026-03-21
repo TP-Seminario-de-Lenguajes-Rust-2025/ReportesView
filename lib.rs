@@ -27,7 +27,13 @@ mod reportes {
     //      un struct que contenga producto_id, nombre del producto
     //      y cantidad total de ventas (entregadas).
     pub trait ConsultasProductos {
-        fn _get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos>;
+        fn _get_productos_mas_vendidos(
+            &self, 
+            limit_to: u32,
+            ordenes: Vec<Orden>,
+            publicaciones: Vec<Publicacion>,
+            productos: Vec<Producto>
+        ) -> Vec<ProductosVendidos>;
     }
 
     //TODO: Los tipos de retorno son genericos. Hay que crear
@@ -76,6 +82,14 @@ mod reportes {
         }
 
         #[ink(message)]
+        pub fn get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos> {
+            let ordenes = self.original.listar_ordenes();
+            let publicaciones = self.original.listar_publicaciones();
+            let productos = self.original.listar_productos();
+            self._get_productos_mas_vendidos(limit_to, ordenes, publicaciones, productos)
+        }
+
+        #[ink(message)]
         pub fn get_mejores_usuarios_por_rol(&self, target_role: Rol) -> Vec<Usuario> {
             let usuarios = self.get_usuarios();
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
@@ -91,12 +105,8 @@ mod reportes {
     }
 
     impl ConsultasProductos for Reportes {
-        fn _get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos> {
+        fn _get_productos_mas_vendidos(&self, limit_to: u32, ordenes: Vec<Orden>, publicaciones: Vec<Publicacion>, productos: Vec<Producto>) -> Vec<ProductosVendidos> {
             let mut lista_vendidos: Vec<ProductosVendidos> = Vec::new();
-
-            let ordenes = self.original.listar_ordenes();
-            let publicaciones = self.original.listar_publicaciones();
-            let productos = self.original.listar_productos();
 
 
             for orden in ordenes {
