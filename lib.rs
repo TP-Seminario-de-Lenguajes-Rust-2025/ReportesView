@@ -15,11 +15,19 @@ mod reportes {
         pub cantidad_ordenes: u32,
     }
 
+    #[ink::scale_derive(Encode, Decode, TypeInfo)]
+    #[derive(Clone)]
+    pub struct ProductosVendidos {
+        pub id_producto: u32,
+        pub nombre_producto: String,
+        pub cantidad_ventas: u32,
+    }
+
     //TODO: Los tipos de retorno son genericos. Hay que crear
     //      un struct que contenga producto_id, nombre del producto
     //      y cantidad total de ventas (entregadas).
     pub trait ConsultasProductos {
-        fn _get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<Producto>;
+        fn _get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos>;
     }
 
     //TODO: Los tipos de retorno son genericos. Hay que crear
@@ -73,12 +81,83 @@ mod reportes {
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
         }
 
+        fn get_producto(&self, id_producto: u32) -> Option<Producto> {
+            self.original.obtener_producto(id_producto)
+        }
+
         fn get_usuarios(&self) -> Vec<Usuario> {
             self.original.listar_usuarios(1, 500)
         }
 
         fn get_ordenes(&self) -> Vec<Orden> {
             self.original.listar_ordenes()
+        }
+    }
+
+    impl ConsultasProductos for Reportes {
+        fn _get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos> {
+            let mut lista_vendidos: Vec<ProductosVendidos> = Vec::new();
+
+            let ordenes = self.original.listar_ordenes();
+            let publicaciones = self.original.listar_publicaciones();
+            let productos = self.original.listar_productos();
+
+
+            for orden in ordenes {
+                if orden.get_status() == EstadoOrden::Recibida { 
+                    
+                    let id_pub = orden.get_id_publicacion();
+                    let cantidad = orden.get_cantidad();
+
+                    let mut id_producto_real = None;
+                    for publi in &publicaciones {
+                        if publi.get_id() == id_pub {
+                            id_producto_real = Some(publi.get_id_producto());
+                            break;
+                        }
+                    }
+
+                    if let Some(id_prod) = id_producto_real {
+                        let mut encontrado = false;
+
+                        for item in lista_vendidos.iter_mut() {
+                            if item.id_producto == id_prod {
+                                item.cantidad_ventas = item.cantidad_ventas.saturating_add(cantidad);
+                                encontrado = true;
+                                break;
+                            }
+                        }
+
+                        if !encontrado {
+                            let mut nombre_real = String::from("Producto Desconocido");
+                            for prod in &productos {
+                                if prod.get_id() == id_prod {
+                                    nombre_real = prod.nombre.clone();
+                                    break;
+                                }
+                            }
+                            
+                            lista_vendidos.push(ProductosVendidos {
+                                id_producto: id_prod,
+                                nombre_producto: nombre_real,
+                                cantidad_ventas: cantidad,
+                            });
+                        }
+                    }
+                }
+            }
+
+            lista_vendidos.sort_by(|a, b| b.cantidad_ventas.cmp(&a.cantidad_ventas));
+
+            let mut resultado_final = Vec::new();
+            for (index, item) in lista_vendidos.into_iter().enumerate() {
+                if index as u32 >= limit_to {
+                    break;
+                }
+                resultado_final.push(item);
+            }
+
+            resultado_final
         }
     }
 
