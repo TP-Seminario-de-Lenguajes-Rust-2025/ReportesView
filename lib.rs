@@ -402,7 +402,7 @@ mod tests {
         id_comprador: AccountId,
         status: EstadoOrden,
         cantidad: u32,
-        precio_total: Balance,
+        precio_total: u128,
         cal_vendedor: Option<u8>,
         cal_comprador: Option<u8>,
     }
