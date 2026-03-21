@@ -23,12 +23,26 @@ mod reportes {
         pub ventas_entregadas: u32,
         pub calificacion_promedio: u32, 
     }
+  
+    #[ink::scale_derive(Encode, Decode, TypeInfo)]
+    #[derive(Clone)]
+    pub struct ProductosVendidos {
+        pub id_producto: u32,
+        pub nombre_producto: String,
+        pub cantidad_ventas: u32,
+    }
 
     //TODO: Los tipos de retorno son genericos. Hay que crear
     //      un struct que contenga producto_id, nombre del producto
     //      y cantidad total de ventas (entregadas).
     pub trait ConsultasProductos {
-        fn _get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<Producto>;
+        fn _get_productos_mas_vendidos(
+            &self, 
+            limit_to: u32,
+            ordenes: Vec<Orden>,
+            publicaciones: Vec<Publicacion>,
+            productos: Vec<Producto>
+        ) -> Vec<ProductosVendidos>;
     }
 
     //TODO: Los tipos de retorno son genericos. Hay que crear
@@ -84,6 +98,14 @@ mod reportes {
 
         /// Devuelve los 5 usuarios mejor calificados en cada rol
         #[ink(message)]
+        pub fn get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos> {
+            let ordenes = self.original.listar_ordenes();
+            let publicaciones = self.original.listar_publicaciones();
+            let productos = self.original.listar_productos();
+            self._get_productos_mas_vendidos(limit_to, ordenes, publicaciones, productos)
+        }
+
+        #[ink(message)]
         pub fn get_mejores_usuarios_por_rol(&self, target_role: Rol) -> Vec<Usuario> {
             let usuarios = self.get_usuarios();
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
@@ -106,6 +128,69 @@ mod reportes {
 
         fn get_ordenes(&self) -> Vec<Orden> {
             self.original.listar_ordenes()
+        }
+    }
+
+    impl ConsultasProductos for Reportes {
+        fn _get_productos_mas_vendidos(&self, limit_to: u32, ordenes: Vec<Orden>, publicaciones: Vec<Publicacion>, productos: Vec<Producto>) -> Vec<ProductosVendidos> {
+            let mut lista_vendidos: Vec<ProductosVendidos> = Vec::new();
+
+
+            for orden in ordenes {
+                if orden.get_status() == EstadoOrden::Recibida { 
+                    
+                    let id_pub = orden.get_id_publicacion();
+                    let cantidad = orden.get_cantidad();
+
+                    let mut id_producto_real = None;
+                    for publi in &publicaciones {
+                        if publi.get_id() == id_pub {
+                            id_producto_real = Some(publi.get_id_producto());
+                            break;
+                        }
+                    }
+
+                    if let Some(id_prod) = id_producto_real {
+                        let mut encontrado = false;
+
+                        for item in lista_vendidos.iter_mut() {
+                            if item.id_producto == id_prod {
+                                item.cantidad_ventas = item.cantidad_ventas.saturating_add(cantidad);
+                                encontrado = true;
+                                break;
+                            }
+                        }
+
+                        if !encontrado {
+                            let mut nombre_real = String::from("Producto Desconocido");
+                            for prod in &productos {
+                                if prod.get_id() == id_prod {
+                                    nombre_real = prod.get_nombre();
+                                    break;
+                                }
+                            }
+                            
+                            lista_vendidos.push(ProductosVendidos {
+                                id_producto: id_prod,
+                                nombre_producto: nombre_real,
+                                cantidad_ventas: cantidad,
+                            });
+                        }
+                    }
+                }
+            }
+
+            lista_vendidos.sort_by(|a, b| b.cantidad_ventas.cmp(&a.cantidad_ventas));
+
+            let mut resultado_final = Vec::new();
+            for (index, item) in lista_vendidos.into_iter().enumerate() {
+                if index as u32 >= limit_to {
+                    break;
+                }
+                resultado_final.push(item);
+            }
+
+            resultado_final
         }
     }
 
@@ -390,6 +475,153 @@ mod tests {
 
         let mejores = reportes._get_mejores_usuarios_por_rol(&Rol::Comprador, usuarios);
         assert_eq!(mejores.len(), 0, "No debe retornar nada al pasar un vector vacio");
+    }
+
+    // ==========================================
+    // MOCK PARA SALTEAR LA PRIVACIDAD DE ORDEN
+    // ==========================================
+
+    #[ink::scale_derive(Encode)]
+    struct MockOrden {
+        id: u32,
+        id_publicacion: u32,
+        id_vendedor: AccountId,
+        id_comprador: AccountId,
+        status: EstadoOrden,
+        cantidad: u32,
+        precio_total: u128,
+        cal_vendedor: Option<u8>,
+        cal_comprador: Option<u8>,
+    }
+
+    // Helper que usa tu mismo truco de serialización para crear una Orden con cualquier estado
+    fn crear_orden_mock(
+        id: u32,
+        id_publicacion: u32,
+        id_vendedor: AccountId,
+        id_comprador: AccountId,
+        cantidad: u32,
+        status: EstadoOrden,
+    ) -> Orden {
+        let mock = MockOrden {
+            id,
+            id_publicacion,
+            id_vendedor,
+            id_comprador,
+            status,
+            cantidad,
+            precio_total: 1000, // Valor irrelevante para este test
+            cal_vendedor: None,
+            cal_comprador: None,
+        };
+        let encoded = ink::scale::Encode::encode(&mock);
+        ink::scale::Decode::decode(&mut &encoded[..]).unwrap()
+    }
+
+    // ==========================================
+    // HELPERS PARA GENERAR VECTORES DE PRUEBA
+    // ==========================================
+
+    fn generar_productos_mock() -> Vec<Producto> {
+        vec![
+            Producto::new(0, account_id(AccountKeyring::Alice), "Zapatillas".into(), "Desc".into(), 1, 10),
+            Producto::new(1, account_id(AccountKeyring::Alice), "Remera".into(), "Desc".into(), 1, 10),
+            Producto::new(2, account_id(AccountKeyring::Bob), "Pantalon".into(), "Desc".into(), 1, 10),
+        ]
+    }
+
+    fn generar_publicaciones_mock() -> Vec<Publicacion> {
+        vec![
+            Publicacion::new(0, 0, account_id(AccountKeyring::Alice), 10, 100), // pub 0 -> prod 0 (Zapatillas)
+            Publicacion::new(1, 1, account_id(AccountKeyring::Alice), 10, 50),  // pub 1 -> prod 1 (Remera)
+            Publicacion::new(2, 2, account_id(AccountKeyring::Bob), 10, 200),   // pub 2 -> prod 2 (Pantalon)
+            Publicacion::new(3, 0, account_id(AccountKeyring::Alice), 5, 120),  // pub 3 -> prod 0 (Zapatillas)
+        ]
+    }
+
+    fn generar_ordenes_mock() -> Vec<Orden> {
+        // Zapatillas (Pub 0 y 3): 2 ventas + 3 ventas = 5 en total. Ambas RECIBIDAS.
+        let o1 = crear_orden_mock(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 2, EstadoOrden::Recibida);
+        let o2 = crear_orden_mock(1, 3, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 3, EstadoOrden::Recibida);
+
+        // Remera (Pub 1): 1 venta RECIBIDA y 1 venta PENDIENTE (la pendiente de 10 unidades se debe ignorar)
+        let o3 = crear_orden_mock(2, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 1, EstadoOrden::Recibida);
+        let o4 = crear_orden_mock(3, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 10, EstadoOrden::Pendiente);
+
+        // Pantalon (Pub 2): 4 ventas RECIBIDAS
+        let o5 = crear_orden_mock(4, 2, account_id(AccountKeyring::Bob), account_id(AccountKeyring::Charlie), 4, EstadoOrden::Recibida);
+
+        vec![o1, o2, o3, o4, o5]
+    }
+
+    // ==========================================
+    // TESTS UNITARIOS: PRODUCTOS MAS VENDIDOS
+    // ==========================================
+
+    #[ink::test]
+    fn test_get_productos_mas_vendidos_exito_y_ordenamiento() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        let productos = generar_productos_mock();
+        let publicaciones = generar_publicaciones_mock();
+        let ordenes = generar_ordenes_mock();
+
+        // Pedimos hasta 10 productos
+        let top = reportes._get_productos_mas_vendidos(10, ordenes, publicaciones, productos);
+
+        // Debería haber 3 productos únicos con ventas concretadas
+        assert_eq!(top.len(), 3, "Deberían encontrarse 3 productos con ventas finalizadas");
+
+        // El orden debe ser descendente estricto: Zapatillas(5), Pantalon(4), Remera(1)
+        assert_eq!(top[0].nombre_producto, "Zapatillas");
+        assert_eq!(top[0].cantidad_ventas, 5, "Zapatillas debe sumar 5 ventas combinadas");
+
+        assert_eq!(top[1].nombre_producto, "Pantalon");
+        assert_eq!(top[1].cantidad_ventas, 4);
+
+        assert_eq!(top[2].nombre_producto, "Remera");
+        assert_eq!(top[2].cantidad_ventas, 1, "La remera solo debe tener 1 venta, ignorando la orden Pendiente");
+    }
+
+    #[ink::test]
+    fn test_get_productos_mas_vendidos_aplica_limite() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        let productos = generar_productos_mock();
+        let publicaciones = generar_publicaciones_mock();
+        let ordenes = generar_ordenes_mock();
+
+        // Le pedimos solo el TOP 2
+        let top = reportes._get_productos_mas_vendidos(2, ordenes, publicaciones, productos);
+
+        assert_eq!(top.len(), 2, "El resultado debe truncarse a 2 elementos");
+        assert_eq!(top[0].nombre_producto, "Zapatillas");
+        assert_eq!(top[1].nombre_producto, "Pantalon");
+    }
+
+    #[ink::test]
+    fn test_get_productos_mas_vendidos_solo_cuenta_recibidas() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        let productos = generar_productos_mock();
+        let publicaciones = generar_publicaciones_mock();
+        
+        // Creamos ordenes que son SOLO pendientes o canceladas
+        let ordenes = vec![
+            crear_orden_mock(0, 0, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Charlie), 5, EstadoOrden::Pendiente),
+            crear_orden_mock(1, 1, account_id(AccountKeyring::Alice), account_id(AccountKeyring::Dave), 2, EstadoOrden::Cancelada),
+        ];
+
+        let top = reportes._get_productos_mas_vendidos(10, ordenes, publicaciones, productos);
+
+        assert_eq!(top.len(), 0, "Si no hay ventas 'Recibidas', el vector final debe estar vacío");
+    }
+
+    #[ink::test]
+    fn test_get_productos_mas_vendidos_listas_vacias() {
+        let reportes = Reportes::new(account_id(AccountKeyring::Alice));
+        
+        // Simular bases de datos vacías para asegurar que no tire panic
+        let top = reportes._get_productos_mas_vendidos(10, vec![], vec![], vec![]);
+
+        assert_eq!(top.len(), 0, "Debe manejar correctamente las colecciones vacías sin crashear");
     }
 
 }
