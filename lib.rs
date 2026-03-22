@@ -219,7 +219,7 @@ mod reportes {
 
             //aca filtro usuarios que tengan el target role
             for usuario in usuarios {
-                if usuario.has_role(target_role.clone()) {
+                if matches!(target_role, Rol::Ambos) || usuario.has_role(target_role.clone()) {
                     usuarios_filtrados.push(usuario);
                 }
             }
