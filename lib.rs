@@ -209,7 +209,7 @@ mod reportes {
                     }
                 }
                 let item = ReporteOrdenesUsuario {
-                    id_usuario: usuario.get_id(),
+                    id_usuario : usuario.get_id(),
                     nombre_usuario: usuario.get_name(),
                     cantidad_ordenes: contador,
                 };
@@ -247,8 +247,8 @@ mod reportes {
         //funcion auxialiar para calcular promedio
         fn _calcular_promedio(&self, usuario: &Usuario, rol: &Rol) -> u32 {
             let (puntos, cantidad) = match rol {
-                Rol::Comprador => usuario.clone().rating.get_calificacion_comprador(),
-                Rol::Vendedor => usuario.clone().rating.get_calificacion_vendedor(),
+                Rol::Comprador => usuario.clone().get_calificacion_comprador(),
+                Rol::Vendedor => usuario.clone().get_calificacion_vendedor(),
                 _ => (0, 0),
             };
             if cantidad == 0 {
@@ -368,10 +368,10 @@ mod tests {
 
     fn generar_reporte_ordenes() -> Vec<ReporteOrdenesUsuario>{
         let mut reporte = Vec::new();
-        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Alice")), cantidad_ordenes: 2 });
-        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Bob")), cantidad_ordenes: 1 });
-        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Charlie")), cantidad_ordenes: 1 });
-        reporte.push(ReporteOrdenesUsuario { nombre_usuario: (String::from("Dave")), cantidad_ordenes: 0 });
+        reporte.push(ReporteOrdenesUsuario { id_usuario: account_id(AccountKeyring::Alice), nombre_usuario: (String::from("Alice")), cantidad_ordenes: 2 });
+        reporte.push(ReporteOrdenesUsuario { id_usuario: account_id(AccountKeyring::Bob), nombre_usuario: (String::from("Bob")), cantidad_ordenes: 1 });
+        reporte.push(ReporteOrdenesUsuario { id_usuario: account_id(AccountKeyring::Charlie), nombre_usuario: (String::from("Charlie")), cantidad_ordenes: 1 });
+        reporte.push(ReporteOrdenesUsuario { id_usuario: account_id(AccountKeyring::Dave), nombre_usuario: (String::from("Dave")), cantidad_ordenes: 0 });
         reporte
     }
 
