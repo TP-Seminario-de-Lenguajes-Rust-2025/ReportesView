@@ -32,9 +32,7 @@ mod reportes {
         pub cantidad_ventas: u32,
     }
 
-    //TODO: Los tipos de retorno son genericos. Hay que crear
-    //      un struct que contenga producto_id, nombre del producto
-    //      y cantidad total de ventas (entregadas).
+
     pub trait ConsultasProductos {
         fn _get_productos_mas_vendidos(
             &self, 
@@ -45,10 +43,6 @@ mod reportes {
         ) -> Vec<ProductosVendidos>;
     }
 
-    //TODO: Los tipos de retorno son genericos. Hay que crear
-    //      un struct que contenga categoria_id, nombre categoria
-    //      y cantidad total de ventas (entregadas) de la categoria
-    //      y calificacion promedio de la categoria. Se retorna un Vec.
     pub trait ConsultasCategorias {
         fn _get_estadisticas_por_categoria(
             &self, 
@@ -71,11 +65,12 @@ mod reportes {
     pub trait ConsultasUsuarios {
         fn _get_cantidad_de_ordenes_por_usuario(&self, usuarios: Vec<Usuario>, ordenes: Vec<Orden>) -> Vec<ReporteOrdenesUsuario>;
 
-        fn _get_mejores_usuarios_por_rol(&self, target_role: &Rol, usuarios: Vec<Usuario>) -> Vec<Usuario>; //separar por rol compra vender
+        fn _get_mejores_usuarios_por_rol(&self, target_role: &Rol, usuarios: Vec<Usuario>) -> Vec<Usuario>; 
 
         fn _calcular_promedio(&self, usuario: &Usuario, rol: &Rol) -> u32;
     }
 
+    /// Estructura con la referencia al contrato original
     #[ink(storage)]
     pub struct Reportes {
         original: SistemaRef,
@@ -88,7 +83,7 @@ mod reportes {
             Self { original }
         }
 
-        /// Devuelve una lista de todos los usuarios registrados en el contrato original.
+        /// Devuelve una lista de las ordenes tiene registradas por cada usuario
         #[ink(message)]
         pub fn get_cantidad_de_ordenes_por_usuario(&self) -> Vec<ReporteOrdenesUsuario> {
             let ordenes = self.get_ordenes();
@@ -96,7 +91,10 @@ mod reportes {
             self._get_cantidad_de_ordenes_por_usuario(usuarios, ordenes)
         }
 
-        /// Devuelve los 5 usuarios mejor calificados en cada rol
+        /// Devuelve una lista ordenada por los productos más vendidos
+        /// 
+        /// # Parámetro
+        /// - `limit_to`: la cantidad de productos a devolver
         #[ink(message)]
         pub fn get_productos_mas_vendidos(&self, limit_to: u32) -> Vec<ProductosVendidos> {
             let ordenes = self.original.listar_ordenes();
@@ -105,13 +103,17 @@ mod reportes {
             self._get_productos_mas_vendidos(limit_to, ordenes, publicaciones, productos)
         }
 
+        /// Devuelve los 5 usuarios mejor calificados segun el rol provisto
+        /// 
+        /// # Parámetro
+        /// - `target_role`: el rol por el cual filtrar. En caso de "Ambos", no se filtra
         #[ink(message)]
         pub fn get_mejores_usuarios_por_rol(&self, target_role: Rol) -> Vec<Usuario> {
             let usuarios = self.get_usuarios();
             self._get_mejores_usuarios_por_rol(&target_role, usuarios)
         }
 
-        /// TODO
+        /// Devuelve el total de ventas y la calificación promedio de los productos de cada categoría
         #[ink(message)]
         pub fn get_estadisticas_por_categoria(&self) -> Vec<EstadisticasCategoria> {
             let categorias = self.original.listar_categorias();
@@ -773,4 +775,4 @@ mod tests {
         assert_eq!(stats[1].calificacion_promedio, 0);
     }
 
-}
+}
