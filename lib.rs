@@ -11,6 +11,7 @@ mod reportes {
     #[ink::scale_derive(Encode, Decode, TypeInfo)]
     #[derive(Clone)]
     pub struct ReporteOrdenesUsuario {
+        pub id_usuario: AccountId,
         pub nombre_usuario: String,
         pub cantidad_ordenes: u32,
     }
@@ -208,6 +209,7 @@ mod reportes {
                     }
                 }
                 let item = ReporteOrdenesUsuario {
+                    id_usuario: usuario.get_id(),
                     nombre_usuario: usuario.get_name(),
                     cantidad_ordenes: contador,
                 };
