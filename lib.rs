@@ -10,6 +10,7 @@ mod reportes {
     use core::{
         ops::{Div, Rem},
     };
+    use scale_info::prelude::format;
 
     #[ink::scale_derive(Encode, Decode, TypeInfo)]
     #[derive(Clone)]
