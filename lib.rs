@@ -58,15 +58,6 @@ mod reportes {
         ) -> Vec<EstadisticasCategoria>;
     }
 
-    //TODO: Los tipos de retorno son genericos. Hay que crear
-    //      un struct que contenga usuario_id, nombre_usuario,
-    //      y cantidad total ordenes (todas). Se retorna un Vec
-    //      para (get_cantidad_de_ordenes_por_usuario).
-    ///
-    //      Despues, hay que crear un struct que contenga account_id,
-    //      nombre del usuario y su reputacion. Se retorna el Vec
-    //      ordenado DESC por reputacion de usuario (ver como ordenar, si
-    ///     por str o por numerico)
     pub trait ConsultasUsuarios {
         fn _get_cantidad_de_ordenes_por_usuario(&self, usuarios: Vec<Usuario>, ordenes: Vec<Orden>) -> Vec<ReporteOrdenesUsuario>;
 
