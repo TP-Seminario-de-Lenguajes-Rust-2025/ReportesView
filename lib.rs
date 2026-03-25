@@ -7,6 +7,9 @@ mod reportes {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
     use marketplacedescentralizado::prelude::*;
+    use core::{
+        ops::{Div, Rem},
+    };
 
     #[ink::scale_derive(Encode, Decode, TypeInfo)]
     #[derive(Clone)]
@@ -22,7 +25,7 @@ mod reportes {
         pub categoria_id: u32,
         pub nombre_categoria: String,
         pub ventas_entregadas: u32,
-        pub calificacion_promedio: u32, 
+        pub calificacion_promedio: String, 
     }
   
     #[ink::scale_derive(Encode, Decode, TypeInfo)]
@@ -312,7 +315,7 @@ mod reportes {
                     categoria_id: cat.get_id(),
                     nombre_categoria: cat.get_nombre(),
                     ventas_entregadas,
-                    calificacion_promedio
+                    calificacion_promedio: String::from(format!("{entero},{decimal}", entero = calificacion_promedio.div(10), decimal = calificacion_promedio.rem(10)))
                 });
             }
             reporte
@@ -708,12 +711,12 @@ mod tests {
         // Indumentaria: 3 + 2 = 5 ventas, promedio cal = (4+2)*10/2 = 30
         assert_eq!(stats[0].nombre_categoria, "Indumentaria");
         assert_eq!(stats[0].ventas_entregadas, 5);
-        assert_eq!(stats[0].calificacion_promedio, 30); // (4+2)*10 / 2
+        assert_eq!(stats[0].calificacion_promedio, String::from("3,0")); // (4+2)*10 / 2
 
         // Electronica: 1 venta, promedio cal = 5*10/1 = 50
         assert_eq!(stats[1].nombre_categoria, "Electronica");
         assert_eq!(stats[1].ventas_entregadas, 1);
-        assert_eq!(stats[1].calificacion_promedio, 50);
+        assert_eq!(stats[1].calificacion_promedio, String::from("5,0"));
     }
 
     #[ink::test]
@@ -729,7 +732,7 @@ mod tests {
         assert_eq!(stats.len(), 2);
         for s in &stats {
             assert_eq!(s.ventas_entregadas, 0);
-            assert_eq!(s.calificacion_promedio, 0);
+            assert_eq!(s.calificacion_promedio, String::from("0,0"));
         }
     }
 
@@ -750,7 +753,7 @@ mod tests {
 
         for s in &stats {
             assert_eq!(s.ventas_entregadas, 0, "no deberia contar ventas de ordenes que no estan recibidas");
-            assert_eq!(s.calificacion_promedio, 0);
+            assert_eq!(s.calificacion_promedio, String::from("0,0"));
         }
     }
 
@@ -771,10 +774,10 @@ mod tests {
 
         // las ventas se suman igual, pero el promedio queda en 0 porque no hay calificaciones
         assert_eq!(stats[0].ventas_entregadas, 4); // Indumentaria
-        assert_eq!(stats[0].calificacion_promedio, 0);
+        assert_eq!(stats[0].calificacion_promedio, String::from("0,0"));
 
         assert_eq!(stats[1].ventas_entregadas, 2); // Electronica
-        assert_eq!(stats[1].calificacion_promedio, 0);
+        assert_eq!(stats[1].calificacion_promedio, String::from("0,0"));
     }
 
 }
